@@ -1,12 +1,12 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { exec } from 'child_process';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
+const OLLAMA_API_URL = 'http://localhost:11434';
 
 app.use(express.json());
 
@@ -24,93 +24,144 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-function escapeShellInput(input) {
-    return input.replace(/'/g, "'\"'\"'");
-}
-
-function executeOllama(model, input, timeout, callback) {
-    const escapedInput = escapeShellInput(input);
-    const command = `ollama run ${model} '${escapedInput}'`;
+async function callOllamaAPI(model, prompt, timeout = 60000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
     
-    console.log(`Executing: ${command.substring(0, 100)}...`);
-    
-    const options = {
-        timeout: timeout,
-        maxBuffer: 1024 * 1024 * 10,
-        shell: '/bin/bash',
-        env: {
-            ...process.env,
-            PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
-            HOME: process.env.HOME || '/root'
+    try {
+        console.log(`Calling ollama API for model: ${model}`);
+        console.log(`Prompt: ${prompt.substring(0, 100)}...`);
+        
+        const response = await fetch(`${OLLAMA_API_URL}/api/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: model,
+                prompt: prompt,
+                stream: false,
+                options: {
+                    temperature: 0.7,
+                    top_p: 0.9,
+                }
+            }),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Ollama API error (${response.status}): ${errorText}`);
         }
-    };
-    
-    exec(command, options, callback);
+        
+        const data = await response.json();
+        console.log(`Ollama API response received for ${model}`);
+        
+        return data.response;
+        
+    } catch (error) {
+        clearTimeout(timeoutId);
+        
+        if (error.name === 'AbortError') {
+            throw new Error('Request timeout - ollama took too long to respond');
+        }
+        
+        console.error('Ollama API error:', error.message);
+        throw error;
+    }
 }
 
-app.post('/api/llama-1', (req, res) => {
+app.post('/api/llama-1', async (req, res) => {
     const input = req.body.input;
     if (!input) return res.status(400).json({ error: 'Missing input' });
 
     console.log(`Processing llama-1 request with input: ${input.substring(0, 100)}...`);
     
-    executeOllama('llama3.2:1b', input, 60000, (error, stdout, stderr) => {
-        if (error) {
-            console.error('Llama-1 error:', error.message);
-            console.error('Stderr:', stderr);
-            
-            if (error.code === 'ETIMEDOUT') {
-                return res.status(408).json({ error: 'Request timeout - ollama took too long to respond' });
-            }
-            
-            return res.status(500).json({ error: stderr || error.message });
-        }
+    try {
+        const result = await callOllamaAPI('llama3.2:1b', input, 60000);
         console.log('Llama-1 request completed successfully');
-        res.json({ result: stdout.trim() });
-    });
+        res.json({ result: result });
+    } catch (error) {
+        console.error('Llama-1 error:', error.message);
+        
+        if (error.message.includes('timeout')) {
+            return res.status(408).json({ error: error.message });
+        }
+        
+        return res.status(500).json({ error: error.message });
+    }
 });
 
-app.post('/api/llama-3', (req, res) => {
+app.post('/api/llama-3', async (req, res) => {
     const input = req.body.input;
     if (!input) return res.status(400).json({ error: 'Missing input' });
 
     console.log(`Processing llama-3 request with input: ${input.substring(0, 100)}...`);
 
-    executeOllama('llama3.2:3b', input, 120000, (error, stdout, stderr) => {
-        if (error) {
-            console.error('Llama-3 error:', error.message);
-            console.error('Stderr:', stderr);
-            
-            if (error.code === 'ETIMEDOUT') {
-                return res.status(408).json({ error: 'Request timeout - ollama took too long to respond' });
-            }
-            
-            return res.status(500).json({ error: stderr || error.message });
-        }
+    try {
+        const result = await callOllamaAPI('llama3.2:3b', input, 120000);
         console.log('Llama-3 request completed successfully');
-        res.json({ result: stdout.trim() });
-    });
+        res.json({ result: result });
+    } catch (error) {
+        console.error('Llama-3 error:', error.message);
+        
+        if (error.message.includes('timeout')) {
+            return res.status(408).json({ error: error.message });
+        }
+        
+        return res.status(500).json({ error: error.message });
+    }
 });
 
-app.get('/api/test-ollama', (req, res) => {
-    console.log('Testing ollama with simple command...');
+app.get('/api/test-ollama', async (req, res) => {
+    console.log('Testing ollama API with simple command...');
     
-    executeOllama('llama3.2:1b', 'Say hello', 30000, (error, stdout, stderr) => {
-        if (error) {
-            console.error('Ollama test error:', error.message);
-            console.error('Stderr:', stderr);
-            return res.status(500).json({ 
-                error: stderr || error.message,
-                command: 'ollama run llama3.2:1b "Say hello"'
-            });
-        }
+    try {
+        const result = await callOllamaAPI('llama3.2:1b', 'Say hello', 30000);
         
         res.json({ 
             success: true, 
-            result: stdout.trim(),
-            message: 'Ollama is working correctly'
+            result: result,
+            message: 'Ollama API is working correctly',
+            method: 'REST API'
         });
-    });
+    } catch (error) {
+        console.error('Ollama API test error:', error.message);
+        res.status(500).json({ 
+            error: error.message,
+            method: 'REST API',
+            api_url: OLLAMA_API_URL
+        });
+    }
+});
+
+// Add endpoint to check ollama service status
+app.get('/api/ollama-status', async (req, res) => {
+    try {
+        const response = await fetch(`${OLLAMA_API_URL}/api/tags`);
+        
+        if (!response.ok) {
+            throw new Error(`Ollama service not responding (${response.status})`);
+        }
+        
+        const data = await response.json();
+        
+        res.json({
+            status: 'running',
+            api_url: OLLAMA_API_URL,
+            models: data.models || []
+        });
+        
+    } catch (error) {
+        console.error('Ollama status check failed:', error.message);
+        res.status(500).json({
+            status: 'error',
+            error: error.message,
+            api_url: OLLAMA_API_URL
+        });
+    }
 });
 
 app.use((err, req, res, next) => {
@@ -123,4 +174,5 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`API key to use: ${API_KEY}`);
     console.log(`Health check available at: http://localhost:${PORT}/health`);
     console.log(`Ollama test available at: http://localhost:${PORT}/api/test-ollama`);
+    console.log(`Ollama status available at: http://localhost:${PORT}/api/ollama-status`);
 });
