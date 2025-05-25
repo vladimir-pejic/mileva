@@ -10,7 +10,50 @@ const OLLAMA_API_URL = 'http://localhost:11434';
 
 app.use(express.json());
 
-app.use((req, res, next) => {
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Hello, welcome to Mileva API',
+        description: 'A REST API server for running Llama 3.2 models via Ollama',
+        version: '1.0.0',
+        endpoints: {
+            public: {
+                'GET /': 'This documentation page',
+                'GET /health': 'Health check endpoint'
+            },
+            protected: {
+                'POST /api/llama32-1b': 'Generate text using Llama 3.2 1B model',
+                'POST /api/llama32-3b': 'Generate text using Llama 3.2 3B model',
+                'GET /api/test-ollama': 'Test ollama functionality',
+                'GET /api/ollama-status': 'Check ollama service status'
+            }
+        },
+        usage: {
+            authentication: 'Include x-api-key header for protected endpoints',
+            request_format: {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': 'your-api-key'
+                },
+                body: {
+                    input: 'Your prompt text here'
+                }
+            },
+            response_format: {
+                result: 'Generated text response'
+            }
+        },
+        examples: {
+            'curl_example': 'curl -X POST -H "Content-Type: application/json" -H "x-api-key: YOUR_KEY" -d \'{"input":"Hello"}\' http://your-server.com/api/llama32-1b'
+        }
+    });
+});
+
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.use('/api', (req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - IP: ${req.ip}`);
     const key = req.headers['x-api-key'];
     if (key !== API_KEY) {
@@ -18,10 +61,6 @@ app.use((req, res, next) => {
         return res.status(403).json({ error: 'Forbidden - Invalid API Key' });
     }
     next();
-});
-
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 async function callOllamaAPI(model, prompt, timeout = 60000) {
@@ -73,18 +112,18 @@ async function callOllamaAPI(model, prompt, timeout = 60000) {
     }
 }
 
-app.post('/api/llama-1', async (req, res) => {
+app.post('/api/llama32-1b', async (req, res) => {
     const input = req.body.input;
     if (!input) return res.status(400).json({ error: 'Missing input' });
 
-    console.log(`Processing llama-1 request with input: ${input.substring(0, 100)}...`);
+    console.log(`Processing llama32-1b request with input: ${input.substring(0, 100)}...`);
     
     try {
         const result = await callOllamaAPI('llama3.2:1b', input, 60000);
-        console.log('Llama-1 request completed successfully');
+        console.log('Llama32-1b request completed successfully');
         res.json({ result: result });
     } catch (error) {
-        console.error('Llama-1 error:', error.message);
+        console.error('Llama32-1b error:', error.message);
         
         if (error.message.includes('timeout')) {
             return res.status(408).json({ error: error.message });
@@ -94,18 +133,18 @@ app.post('/api/llama-1', async (req, res) => {
     }
 });
 
-app.post('/api/llama-3', async (req, res) => {
+app.post('/api/llama32-3b', async (req, res) => {
     const input = req.body.input;
     if (!input) return res.status(400).json({ error: 'Missing input' });
 
-    console.log(`Processing llama-3 request with input: ${input.substring(0, 100)}...`);
+    console.log(`Processing llama32-3b request with input: ${input.substring(0, 100)}...`);
 
     try {
         const result = await callOllamaAPI('llama3.2:3b', input, 120000);
-        console.log('Llama-3 request completed successfully');
+        console.log('Llama32-3b request completed successfully');
         res.json({ result: result });
     } catch (error) {
-        console.error('Llama-3 error:', error.message);
+        console.error('Llama32-3b error:', error.message);
         
         if (error.message.includes('timeout')) {
             return res.status(408).json({ error: error.message });
@@ -137,7 +176,6 @@ app.get('/api/test-ollama', async (req, res) => {
     }
 });
 
-// Add endpoint to check ollama service status
 app.get('/api/ollama-status', async (req, res) => {
     try {
         const response = await fetch(`${OLLAMA_API_URL}/api/tags`);
