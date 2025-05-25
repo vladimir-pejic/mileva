@@ -178,7 +178,7 @@ app.post('/api/llama32-1b', async (req, res) => {
     console.log(`Processing llama32-1b request with input: ${input.substring(0, 100)}...`);
     
     try {
-        const result = await callOllamaAPI('llama3.2:1b', input, 60000);
+        const result = await callOllamaAPI('llama3.2:1b', input, 180000); // Increased to 3 minutes for complex prompts
         console.log('Llama32-1b request completed successfully');
         res.json({ result: result });
     } catch (error) {
@@ -217,11 +217,14 @@ app.get('/api/test-ollama', async (req, res) => {
     console.log('Testing ollama API with simple command...');
     
     try {
+        const startTime = Date.now();
         const result = await callOllamaAPI('llama3.2:1b', 'Say hello', 30000);
+        const duration = Date.now() - startTime;
         
         res.json({ 
             success: true, 
             result: result,
+            duration_ms: duration,
             message: 'Ollama API is working correctly',
             method: 'REST API'
         });
@@ -231,6 +234,32 @@ app.get('/api/test-ollama', async (req, res) => {
             error: error.message,
             method: 'REST API',
             api_url: OLLAMA_API_URL
+        });
+    }
+});
+
+app.get('/api/test-complex', async (req, res) => {
+    console.log('Testing ollama with a complex prompt...');
+    
+    try {
+        const startTime = Date.now();
+        const result = await callOllamaAPI('llama3.2:1b', 'Write a simple function in Python that adds two numbers', 120000);
+        const duration = Date.now() - startTime;
+        
+        res.json({ 
+            success: true, 
+            result: result,
+            duration_ms: duration,
+            message: 'Complex prompt test completed',
+            method: 'REST API'
+        });
+    } catch (error) {
+        console.error('Complex test error:', error.message);
+        res.status(500).json({ 
+            error: error.message,
+            method: 'REST API',
+            api_url: OLLAMA_API_URL,
+            suggestion: 'Try restarting ollama service: ollama serve'
         });
     }
 });
