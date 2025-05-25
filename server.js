@@ -11,6 +11,7 @@ const API_KEY = process.env.API_KEY;
 app.use(express.json());
 
 app.use((req, res, next) => {
+    console.log(req);
     const key = req.headers['x-api-key'];
     if (key !== API_KEY) {
         return res.status(403).json({ error: 'Forbidden - Invalid API Key' });
