@@ -10,10 +10,58 @@ const OLLAMA_API_URL = 'http://localhost:11434';
 
 app.use(express.json());
 
+// Middleware to ensure JSON responses and pretty print for browsers
+app.use((req, res, next) => {
+    const originalJson = res.json;
+    res.json = function(obj) {
+        res.setHeader('Content-Type', 'application/json');
+        
+        // Check if request is from a browser (has text/html in Accept header)
+        // But allow forcing JSON with ?format=json query parameter
+        const isBrowser = req.headers.accept && req.headers.accept.includes('text/html') && req.query.format !== 'json';
+        
+        if (isBrowser) {
+            // Pretty print JSON for browser viewing with basic styling
+            const prettyJson = JSON.stringify(obj, null, 2);
+            const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mileva API Response</title>
+    <style>
+        body { font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; margin: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; border-left: 4px solid #007bff; }
+        .header { color: #333; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .json-response { font-size: 14px; line-height: 1.4; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>🚀 Mileva API Response</h2>
+            <p>Content-Type: application/json</p>
+        </div>
+        <pre class="json-response">${prettyJson}</pre>
+    </div>
+</body>
+</html>`;
+            res.setHeader('Content-Type', 'text/html');
+            return res.send(html);
+        } else {
+            // Standard JSON response for API clients
+            return originalJson.call(this, obj);
+        }
+    };
+    next();
+});
+
 app.get('/', (req, res) => {
     res.json({
         message: 'Hello, welcome to Mileva API',
-        description: 'A REST API server for running Llama 3.2 models via Ollama',
+        description: 'A REST API server for testing and accessing ANY installed Ollama model via HTTP endpoints',
+        purpose: 'Designed for testing and experimentation with Ollama models',
+        model_support: 'Works with ANY ollama model - just add an endpoint for it!',
         version: '1.0.0',
         endpoints: {
             public: {
@@ -25,7 +73,8 @@ app.get('/', (req, res) => {
                 'POST /api/llama32-3b': 'Generate text using Llama 3.2 3B model',
                 'GET /api/test-ollama': 'Test ollama functionality',
                 'GET /api/ollama-status': 'Check ollama service status'
-            }
+            },
+            note: 'Additional endpoints can be easily added for ANY installed ollama model'
         },
         usage: {
             authentication: 'Include x-api-key header for protected endpoints',
@@ -45,6 +94,16 @@ app.get('/', (req, res) => {
         },
         examples: {
             'curl_example': 'curl -X POST -H "Content-Type: application/json" -H "x-api-key: YOUR_KEY" -d \'{"input":"Hello"}\' http://your-server.com/api/llama32-1b'
+        },
+        browser_usage: {
+            note: 'When accessing via browser, responses are formatted for readability',
+            force_json: 'Add ?format=json to any URL to get raw JSON response',
+            example: 'http://your-server.com/?format=json'
+        },
+        how_to_add_models: {
+            description: 'To add support for any other ollama model, simply create a new endpoint',
+            example_code: 'app.post("/api/modelname", async (req, res) => { const result = await callOllamaAPI("model:tag", req.body.input, timeout); res.json({ result }); });',
+            note: 'Replace "modelname" with your desired endpoint and "model:tag" with actual ollama model name'
         }
     });
 });
@@ -208,9 +267,12 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Mileva API server running on port ${PORT}`);
-    console.log(`API key to use: ${API_KEY}`);
-    console.log(`Health check available at: http://localhost:${PORT}/health`);
-    console.log(`Ollama test available at: http://localhost:${PORT}/api/test-ollama`);
-    console.log(`Ollama status available at: http://localhost:${PORT}/api/ollama-status`);
+    console.log(`🚀 Mileva API server running on port ${PORT}`);
+    console.log(`🧪 Purpose: Testing and accessing ANY installed Ollama model`);
+    console.log(`🔑 API key to use: ${API_KEY}`);
+    console.log(`📚 Documentation: http://localhost:${PORT}/`);
+    console.log(`❤️  Health check: http://localhost:${PORT}/health`);
+    console.log(`🧪 Ollama test: http://localhost:${PORT}/api/test-ollama`);
+    console.log(`📊 Ollama status: http://localhost:${PORT}/api/ollama-status`);
+    console.log(`\n💡 To add new models: Just create new endpoints following the pattern!`);
 });

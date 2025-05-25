@@ -1,11 +1,15 @@
 # Mileva API Server
 
-A REST API server for running Llama 3.2 models via Ollama. This server provides easy HTTP access to Ollama's AI models with proper authentication and error handling.
+A REST API server for testing and accessing **ANY installed Ollama model** via HTTP endpoints. This server provides easy HTTP access to Ollama's AI models with proper authentication and error handling.
+
+> **🧪 Testing Purpose**: This server is designed for testing and experimentation with any Ollama model. Adding support for new models is as simple as creating a new endpoint!
 
 ## 🚀 Features
 
-- **Multiple Model Support**: Llama 3.2 1B and 3B models
+- **Universal Model Support**: Works with ANY installed Ollama model (currently includes Llama 3.2 1B and 3B)
+- **Easy Model Addition**: Add new models by simply creating new endpoints
 - **REST API Interface**: Clean HTTP API instead of CLI commands
+- **Testing Focused**: Perfect for experimenting with different models
 - **Authentication**: API key protection for model endpoints
 - **Error Handling**: Comprehensive error handling and timeouts
 - **Health Monitoring**: Built-in health checks and diagnostics
@@ -16,7 +20,7 @@ A REST API server for running Llama 3.2 models via Ollama. This server provides 
 
 - **Node.js** v18+ 
 - **Ollama** installed and running
-- **Llama 3.2 models** downloaded
+- **Any Ollama models** you want to test (examples use Llama 3.2 1B and 3B)
 
 ### Installing Ollama
 
@@ -127,6 +131,60 @@ curl -X POST http://your-server.com/api/llama32-1b \
 | `npm run check-ollama` | Verify ollama CLI installation |
 | `npm run check-service` | Check if ollama service is running |
 | `npm run diagnose` | Full environment diagnostics |
+
+## 🚀 Adding New Models
+
+**Adding support for any ollama model is incredibly easy!** Just follow this pattern:
+
+### 1. Check available models:
+```bash
+ollama list
+```
+
+### 2. Add a new endpoint:
+```javascript
+app.post('/api/your-model-name', async (req, res) => {
+    const input = req.body.input;
+    if (!input) return res.status(400).json({ error: 'Missing input' });
+
+    console.log(`Processing your-model-name request with input: ${input.substring(0, 100)}...`);
+    
+    try {
+        // Replace 'model:tag' with your actual model name from 'ollama list'
+        const result = await callOllamaAPI('model:tag', input, 60000);
+        console.log('Your-model-name request completed successfully');
+        res.json({ result: result });
+    } catch (error) {
+        console.error('Your-model-name error:', error.message);
+        
+        if (error.message.includes('timeout')) {
+            return res.status(408).json({ error: error.message });
+        }
+        
+        return res.status(500).json({ error: error.message });
+    }
+});
+```
+
+### 3. Examples for popular models:
+```javascript
+// For CodeLlama
+app.post('/api/codellama', async (req, res) => {
+    // ... same pattern with callOllamaAPI('codellama:latest', input, 60000)
+});
+
+// For Mistral
+app.post('/api/mistral', async (req, res) => {
+    // ... same pattern with callOllamaAPI('mistral:latest', input, 60000)
+});
+
+// For any other model
+app.post('/api/modelname', async (req, res) => {
+    // ... same pattern with callOllamaAPI('actual-model:tag', input, 60000)
+});
+```
+
+**That's it!** The server architecture handles everything else automatically.
 
 ## 🔍 Troubleshooting
 
