@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import { writeFileSync, appendFileSync } from 'fs';
 
 const MAX_RESTARTS = 5;
-const RESTART_DELAY = 5000; // 5 seconds
+const RESTART_DELAY = 5000;
 
 let restartCount = 0;
 let serverProcess = null;

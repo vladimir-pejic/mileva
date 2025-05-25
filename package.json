@@ -8,7 +8,8 @@
     "start:managed": "node start-server.js",
     "dev": "node --watch server.js",
     "health": "curl -H \"x-api-key: $API_KEY\" http://localhost:3000/health",
-    "check-ollama": "node check-ollama.js"
+    "check-ollama": "node check-ollama.js",
+    "diagnose": "node diagnose-deployment.js"
   },
   "dependencies": {
     "dotenv": "^16.3.1",
