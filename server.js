@@ -43,7 +43,7 @@ app.post('/api/llama-3', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Mileva API server running on port ${PORT}`);
     console.log(`API key to use: ${API_KEY}`);
 });
