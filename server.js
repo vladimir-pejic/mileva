@@ -72,6 +72,7 @@ app.get('/', (req, res) => {
                 'POST /api/llama32-1b': 'Generate text using Llama 3.2 1B model',
                 'POST /api/llama32-3b': 'Generate text using Llama 3.2 3B model',
                 'POST /api/gemma3-4b': 'Generate text using Gemma 3 4B model',
+                'POST /api/phi3-mini': 'Generate text using Phi-3 Mini model',
                 'GET /api/test-ollama': 'Test ollama functionality',
                 'GET /api/ollama-status': 'Check ollama service status'
             },
@@ -140,9 +141,11 @@ async function callOllamaAPI(model, prompt, timeout = 60000) {
                 model: model,
                 prompt: prompt,
                 stream: false,
+                keep_alive: -1,
                 options: {
                     temperature: 0.7,
                     top_p: 0.9,
+                    num_ctx: 4096
                 }
             }),
             signal: controller.signal
@@ -226,6 +229,27 @@ app.post('/api/gemma3-4b', async (req, res) => {
         res.json({ result: result });
     } catch (error) {
         console.error('Gemma3-4b error:', error.message);
+        
+        if (error.message.includes('timeout')) {
+            return res.status(408).json({ error: error.message });
+        }
+        
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/phi3-mini', async (req, res) => {
+    const input = req.body.input;
+    if (!input) return res.status(400).json({ error: 'Missing input' });
+
+    console.log(`Processing phi3-mini request with input: ${input.substring(0, 100)}...`);
+
+    try {
+        const result = await callOllamaAPI('phi3:mini', input, 120000); // 2 minutes for mini model
+        console.log('Phi3-mini request completed successfully');
+        res.json({ result: result });
+    } catch (error) {
+        console.error('Phi3-mini error:', error.message);
         
         if (error.message.includes('timeout')) {
             return res.status(408).json({ error: error.message });

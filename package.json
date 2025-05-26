@@ -10,7 +10,8 @@
     "health": "curl -H \"x-api-key: $API_KEY\" http://localhost:3000/health",
     "check-ollama": "node check-ollama.js",
     "check-service": "node check-ollama-service.js",
-    "diagnose": "node diagnose-deployment.js"
+    "diagnose": "node diagnose-deployment.js",
+    "optimize-ollama": "bash optimize-ollama-start.sh"
   },
   "dependencies": {
     "dotenv": "^16.3.1",
