@@ -6,7 +6,7 @@ A REST API server for testing and accessing **ANY installed Ollama model** via H
 
 ## 🚀 Features
 
-- **Universal Model Support**: Works with ANY installed Ollama model (currently includes Llama 3.2 1B and 3B)
+- **Universal Model Support**: Works with ANY installed Ollama model (currently includes Llama 3.2 1B/3B and Gemma 3 4B)
 - **Easy Model Addition**: Add new models by simply creating new endpoints
 - **REST API Interface**: Clean HTTP API instead of CLI commands
 - **Testing Focused**: Perfect for experimenting with different models
@@ -20,7 +20,7 @@ A REST API server for testing and accessing **ANY installed Ollama model** via H
 
 - **Node.js** v18+ 
 - **Ollama** installed and running
-- **Any Ollama models** you want to test (examples use Llama 3.2 1B and 3B)
+- **Any Ollama models** you want to test (examples use Llama 3.2 1B/3B and Gemma 3 4B)
 
 ### Installing Ollama
 
@@ -31,6 +31,7 @@ curl -fsSL https://ollama.ai/install.sh | sh
 # Pull required models
 ollama pull llama3.2:1b
 ollama pull llama3.2:3b
+ollama pull gemma3:4b
 
 # Start ollama service
 ollama serve
@@ -90,8 +91,9 @@ curl -X POST -H "Content-Type: application/json" \
 
 | Method | Endpoint | Description | Timeout |
 |--------|----------|-------------|---------|
-| `POST` | `/api/llama32-1b` | Generate text using Llama 3.2 1B model | 60s |
+| `POST` | `/api/llama32-1b` | Generate text using Llama 3.2 1B model | 180s |
 | `POST` | `/api/llama32-3b` | Generate text using Llama 3.2 3B model | 120s |
+| `POST` | `/api/gemma3-4b` | Generate text using Gemma 3 4B model | 150s |
 | `GET` | `/api/test-ollama` | Test ollama functionality | 30s |
 | `GET` | `/api/ollama-status` | Check ollama service status | - |
 
@@ -99,6 +101,12 @@ curl -X POST -H "Content-Type: application/json" \
 
 ```bash
 curl -X POST http://your-server.com/api/llama32-1b \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{"input": "Your prompt here"}'
+
+# Example with Gemma 3 4B
+curl -X POST http://your-server.com/api/gemma3-4b \
   -H "Content-Type: application/json" \
   -H "x-api-key: your-api-key" \
   -d '{"input": "Your prompt here"}'

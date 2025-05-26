@@ -71,6 +71,7 @@ app.get('/', (req, res) => {
             protected: {
                 'POST /api/llama32-1b': 'Generate text using Llama 3.2 1B model',
                 'POST /api/llama32-3b': 'Generate text using Llama 3.2 3B model',
+                'POST /api/gemma3-4b': 'Generate text using Gemma 3 4B model',
                 'GET /api/test-ollama': 'Test ollama functionality',
                 'GET /api/ollama-status': 'Check ollama service status'
             },
@@ -204,6 +205,27 @@ app.post('/api/llama32-3b', async (req, res) => {
         res.json({ result: result });
     } catch (error) {
         console.error('Llama32-3b error:', error.message);
+        
+        if (error.message.includes('timeout')) {
+            return res.status(408).json({ error: error.message });
+        }
+        
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/gemma3-4b', async (req, res) => {
+    const input = req.body.input;
+    if (!input) return res.status(400).json({ error: 'Missing input' });
+
+    console.log(`Processing gemma3-4b request with input: ${input.substring(0, 100)}...`);
+
+    try {
+        const result = await callOllamaAPI('gemma3:4b', input, 150000); // 2.5 minutes for 4B model
+        console.log('Gemma3-4b request completed successfully');
+        res.json({ result: result });
+    } catch (error) {
+        console.error('Gemma3-4b error:', error.message);
         
         if (error.message.includes('timeout')) {
             return res.status(408).json({ error: error.message });
