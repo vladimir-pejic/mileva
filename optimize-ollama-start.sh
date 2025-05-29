@@ -46,49 +46,49 @@ fi
 # Pre-load models for faster first responses
 echo "📥 Pre-loading models for instant responses..."
 
-# Pre-load llama3.2:1b
-echo "  Loading llama3.2:1b..."
-curl -s -X POST http://localhost:11434/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "llama3.2:1b",
-    "prompt": "",
-    "keep_alive": -1,
-    "options": {"num_ctx": 4096}
-  }' > /dev/null
+## Pre-load llama3.2:1b
+#echo "  Loading llama3.2:1b..."
+#curl -s -X POST http://localhost:11434/api/generate \
+#  -H "Content-Type: application/json" \
+#  -d '{
+#    "model": "llama3.2:1b",
+#    "prompt": "",
+#    "keep_alive": -1,
+#    "options": {"num_ctx": 4096}
+#  }' > /dev/null
 
 # Pre-load llama3.2:3b
 echo "  Loading llama3.2:3b..."
 curl -s -X POST http://localhost:11434/api/generate \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "llama3.2:3b", 
+    "model": "llama3.2:3b",
     "prompt": "",
     "keep_alive": -1,
     "options": {"num_ctx": 4096}
   }' > /dev/null
 
-# Pre-load phi3:mini
-echo "  Loading phi3:mini..."
-curl -s -X POST http://localhost:11434/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "phi3:mini",
-    "prompt": "",
-    "keep_alive": -1,
-    "options": {"num_ctx": 4096}
-  }' > /dev/null
-
-# Pre-load gemma3:4b
-echo "  Loading gemma3:4b..."
-curl -s -X POST http://localhost:11434/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gemma3:4b",
-    "prompt": "",
-    "keep_alive": -1,
-    "options": {"num_ctx": 4096}
-  }' > /dev/null
+## Pre-load phi3:mini
+#echo "  Loading phi3:mini..."
+#curl -s -X POST http://localhost:11434/api/generate \
+#  -H "Content-Type: application/json" \
+#  -d '{
+#    "model": "phi3:mini",
+#    "prompt": "",
+#    "keep_alive": -1,
+#    "options": {"num_ctx": 4096}
+#  }' > /dev/null
+#
+## Pre-load gemma3:4b
+#echo "  Loading gemma3:4b..."
+#curl -s -X POST http://localhost:11434/api/generate \
+#  -H "Content-Type: application/json" \
+#  -d '{
+#    "model": "gemma3:4b",
+#    "prompt": "",
+#    "keep_alive": -1,
+#    "options": {"num_ctx": 4096}
+#  }' > /dev/null
 
 echo "✅ All models pre-loaded and ready for instant responses!"
 echo ""
@@ -106,4 +106,4 @@ echo ""
 echo "🚀 Ollama is now optimized and ready for maximum performance!"
 
 # Keep the script running (so ollama doesn't exit)
-wait $OLLAMA_PID 
+wait $OLLAMA_PID
