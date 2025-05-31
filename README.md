@@ -4,9 +4,15 @@ A simple REST API server that lets you access any Ollama model through HTTP endp
 
 The server currently supports Llama 3.2 (1B and 3B), Gemma 3 4B, and Phi-3 Mini models, but you can easily add any Ollama model by creating new endpoints.
 
+**NEW**: Now includes OpenAI-compatible API endpoints, so you can use your existing OpenAI code with local models by just changing the base URL!
+
+**ALSO NEW**: Direct access to Google's Gemma model through their cloud API!
+
 ## What it does
 
 - Provides HTTP endpoints for any installed Ollama model
+- **OpenAI API compatibility** - works as a drop-in replacement for OpenAI API calls
+- **Google Gemma integration** - access to Google's cloud-based Gemma model
 - Handles authentication with API keys
 - Includes proper error handling and timeouts
 - Works with browsers (formats JSON nicely) or API clients
@@ -16,6 +22,8 @@ The server currently supports Llama 3.2 (1B and 3B), Gemma 3 4B, and Phi-3 Mini 
 ## Requirements
 
 You'll need Node.js version 18 or newer, and Ollama installed and running on your machine. You'll also want to have the models downloaded that you plan to use.
+
+For Google Gemma integration, you'll need a free Google API key.
 
 ### Getting Ollama set up
 
@@ -34,6 +42,13 @@ Start the Ollama service:
 ollama serve
 ```
 
+### Getting Google API key for Gemma
+
+1. Go to [Google AI Studio](https://aistudio.google.com/)
+2. Create a new project or select an existing one
+3. Get your free API key
+4. Add it to your environment variables
+
 ## Installation
 
 1. Download or clone this project
@@ -48,6 +63,7 @@ npm install
 ```bash
 echo "PORT=3000" > .env
 echo "API_KEY=your-secret-api-key-here" >> .env
+echo "GEMINI_API_KEY=your-google-gemini-api-key" >> .env
 ```
 
 ## Getting started
@@ -75,10 +91,17 @@ Test it out:
 ```bash
 curl http://localhost:3000/
 
+# Test local model
 curl -X POST -H "Content-Type: application/json" \
   -H "x-api-key: your-secret-api-key-here" \
   -d '{"input":"Hello, how are you?"}' \
   http://localhost:3000/api/llama32-1b
+
+# Test Google Gemma
+curl -X POST -H "Content-Type: application/json" \
+  -H "x-api-key: your-secret-api-key-here" \
+  -d '{"input":"Hello, how are you?"}' \
+  http://localhost:3000/api/google-gemma
 ```
 
 ## Available endpoints
@@ -88,7 +111,7 @@ curl -X POST -H "Content-Type: application/json" \
 - `GET /` - Shows documentation and available endpoints
 - `GET /health` - Basic health check
 
-### Protected endpoints (need API key)
+### Mileva native endpoints (need API key)
 
 - `POST /api/llama32-1b` - Use Llama 3.2 1B model (3 minute timeout)
 - `POST /api/llama32-3b` - Use Llama 3.2 3B model (2 minute timeout)
@@ -97,7 +120,21 @@ curl -X POST -H "Content-Type: application/json" \
 - `GET /api/test-ollama` - Test basic Ollama functionality
 - `GET /api/ollama-status` - Check Ollama service status
 
-### How to use the API
+### OpenAI-compatible endpoints (need API key)
+
+These work exactly like OpenAI's API, so you can use existing OpenAI code:
+
+- `POST /v1/chat/completions` - Chat completions (like GPT-3.5/4)
+- `POST /v1/completions` - Text completions (like text-davinci-003)
+- `GET /v1/models` - List available models
+
+### Google Gemma endpoint (need API key + Google API key)
+
+Direct access to Google's cloud-based Gemma model:
+
+- `POST /api/google-gemma` - Google Gemma 3N E4B IT model
+
+### How to use the native API
 
 Send a POST request with your prompt:
 
@@ -108,11 +145,96 @@ curl -X POST http://localhost:3000/api/llama32-1b \
   -d '{"input": "Your prompt here"}'
 ```
 
+### How to use the OpenAI-compatible API
+
+**Chat Completions (recommended):**
+
+```bash
+curl -X POST http://localhost:3000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "model": "gpt-3.5-turbo",
+    "messages": [
+      {"role": "user", "content": "Hello, how are you?"}
+    ]
+  }'
+```
+
+**Text Completions:**
+
+```bash
+curl -X POST http://localhost:3000/v1/completions \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "model": "text-davinci-003",
+    "prompt": "Hello, how are you?"
+  }'
+```
+
+### How to use Google Gemma
+
+The Google Gemma endpoint accepts multiple request formats:
+
+**Simple prompt format (like OpenAI):**
+
+```bash
+curl -X POST http://localhost:3000/api/google-gemma \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "prompt": "Hello, how are you?",
+    "temperature": 0.2,
+    "top_p": 0.8,
+    "max_tokens": 256
+  }'
+```
+
+**Google's native format:**
+
+```bash
+curl -X POST http://localhost:3000/api/google-gemma \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {"text": "Hello, how are you?"}
+        ]
+      }
+    ]
+  }'
+```
+
+**Model mapping:**
+
+The server automatically maps OpenAI model names to local models:
+- `gpt-3.5-turbo` → `llama3.2:3b`
+- `gpt-4`, `gpt-4-turbo`, `gpt-4o` → `gemma3:4b`
+- `gpt-4o-mini` → `llama3.2:1b`
+- `text-davinci-003` → `llama3.2:3b`
+- `code-davinci-002` → `phi3:mini`
+
 You'll get back either:
 
 ```json
 {
-  "result": "The AI model's response"
+  "choices": [
+    {
+      "message": {
+        "role": "assistant", 
+        "content": "The AI model's response"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 10,
+    "completion_tokens": 20,
+    "total_tokens": 30
+  }
 }
 ```
 
@@ -120,8 +242,52 @@ Or if something went wrong:
 
 ```json
 {
-  "error": "Error description"
+  "error": {
+    "message": "Error description",
+    "type": "error_type"
+  }
 }
+```
+
+## Using with existing OpenAI code
+
+If you have existing code that uses OpenAI, you can easily switch to local models:
+
+**Python (openai library):**
+
+```python
+import openai
+
+# Instead of:
+# openai.api_key = "sk-..."
+# openai.api_base = "https://api.openai.com/v1"
+
+# Use:
+openai.api_key = "your-secret-api-key-here"
+openai.api_base = "http://localhost:3000/v1"
+
+# Your existing code works the same!
+response = openai.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+**Node.js:**
+
+```javascript
+// Instead of pointing to OpenAI
+const response = await fetch('http://localhost:3000/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': 'your-secret-api-key-here'
+    },
+    body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: 'Hello!' }]
+    })
+});
 ```
 
 ## Available commands
@@ -170,6 +336,19 @@ app.post('/api/your-model-name', async (req, res) => {
 
 Replace 'your-model-name' with whatever you want the endpoint to be called, and 'actual-model:tag' with the real model name from your ollama list.
 
+**To add OpenAI model mappings**, edit the `mapModelName` function in server.js:
+
+```javascript
+function mapModelName(openaiModel) {
+    const modelMap = {
+        'gpt-3.5-turbo': 'llama3.2:3b',
+        'your-new-model': 'your-ollama-model:tag',
+        // ... existing mappings
+    };
+    return modelMap[openaiModel] || 'llama3.2:3b';
+}
+```
+
 ## Performance optimization
 
 For better performance, you can start Ollama with optimized settings:
@@ -195,6 +374,28 @@ export OLLAMA_FLASH_ATTN=1
 export OLLAMA_NUM_PARALLEL=4
 ollama serve
 ```
+
+## Model comparison
+
+**Local models (Ollama):**
+- ✅ Free to use
+- ✅ Complete privacy (no data sent externally)
+- ✅ Works offline
+- ❌ Requires good hardware
+- ❌ Limited by local compute power
+
+**Google Gemma (cloud):**
+- ✅ Very powerful and fast
+- ✅ Free tier available
+- ✅ No local compute needed
+- ❌ Requires internet
+- ❌ Data sent to Google
+- ❌ Rate limits apply
+
+**OpenAI-compatible (local models):**
+- ✅ Drop-in replacement for existing code
+- ✅ Same benefits as local models
+- ✅ Familiar API format
 
 ## Troubleshooting
 
@@ -225,6 +426,14 @@ Make sure your models are downloaded and you have enough system resources. Try a
 **"Invalid API Key"**
 
 Check your .env file and make sure you're sending the API key in the x-api-key header.
+
+**"Google API key not configured"**
+
+Make sure you have GEMINI_API_KEY set in your .env file:
+
+```bash
+echo "GEMINI_API_KEY=your-google-api-key" >> .env
+```
 
 **Server keeps crashing**
 
@@ -259,6 +468,7 @@ Set your environment variables:
 ```bash
 export PORT=3000
 export API_KEY=your-production-api-key
+export GEMINI_API_KEY=your-google-api-key
 ```
 
 Start Ollama in the background:
@@ -281,10 +491,13 @@ The server connects to Ollama at http://localhost:11434 by default. It uses thes
 
 - `PORT` (default: 3000) - What port the server runs on
 - `API_KEY` - Required for accessing the model endpoints
+- `GEMINI_API_KEY` - Required for Google Gemma endpoint (optional)
 
 ## Security notes
 
 All the model endpoints require an API key. The server validates input and handles errors gracefully without exposing sensitive information. For production use, you should probably add rate limiting.
+
+For Google Gemma endpoint, your prompts are sent to Google's servers, so be mindful of sensitive data.
 
 ## Getting help
 
