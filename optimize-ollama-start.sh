@@ -1,63 +1,45 @@
 #!/bin/bash
 
-echo "🚀 Starting Optimized Ollama Server..."
+export OLLAMA_KEEP_ALIVE=-1
+export OLLAMA_KV_CACHE_TYPE=q8_0
+export OLLAMA_FLASH_ATTN=1
+export OLLAMA_NUM_PARALLEL=4
+export OLLAMA_MAX_LOADED_MODELS=3
+export OLLAMA_NUM_THREAD=8
 
-# Performance and memory settings for optimal speed
-export OLLAMA_KEEP_ALIVE=-1                # Keep models loaded indefinitely
-export OLLAMA_KV_CACHE_TYPE=q8_0          # Use 8-bit quantization for KV cache (50% memory savings)
-export OLLAMA_FLASH_ATTN=1                # Enable Flash Attention for faster processing
-export OLLAMA_NUM_PARALLEL=4              # Allow 4 concurrent requests
-export OLLAMA_MAX_LOADED_MODELS=3         # Keep up to 3 models in memory
-export OLLAMA_NUM_THREAD=8                # Use 8 CPU threads (adjust based on your CPU)
-
-# GPU settings (uncomment if you have GPU)
-# export CUDA_VISIBLE_DEVICES=0
-# export OLLAMA_GPU_MEMORY_FRACTION=0.9
-
-# CPU optimizations
 export OMP_NUM_THREADS=8
-export GOMP_CPU_AFFINITY="0-7"
+export MKL_NUM_THREADS=8
+export OPENBLAS_NUM_THREADS=8
+export VECLIB_MAXIMUM_THREADS=8
+export NUMEXPR_NUM_THREADS=8
 
-echo "📋 Configuration:"
-echo "  - Keep Alive: Indefinite (-1)"
-echo "  - KV Cache: q8_0 (memory optimized)"
-echo "  - Flash Attention: Enabled"
-echo "  - Parallel Requests: 4"
-echo "  - Max Loaded Models: 3"
-echo "  - CPU Threads: 8"
+echo "Starting Ollama with optimizations..."
+echo "Keep-alive: $OLLAMA_KEEP_ALIVE"
+echo "KV Cache: $OLLAMA_KV_CACHE_TYPE"
+echo "Flash Attention: $OLLAMA_FLASH_ATTN"
+echo "Max Parallel: $OLLAMA_NUM_PARALLEL"
+echo "Max Models: $OLLAMA_MAX_LOADED_MODELS"
+echo "CPU Threads: $OLLAMA_NUM_THREAD"
+echo ""
 
-# Start ollama serve in the background
-echo "🔄 Starting ollama serve..."
-ollama serve &
+nohup ollama serve > ollama.log 2>&1 &
 OLLAMA_PID=$!
+echo "Ollama started with PID: $OLLAMA_PID"
 
-# Wait for server to start
-echo "⏳ Waiting for ollama server to initialize..."
-sleep 10
+sleep 5
 
-# Check if server is running
-if curl -s http://localhost:11434/api/version > /dev/null; then
-    echo "✅ Ollama server is running!"
+if ps -p $OLLAMA_PID > /dev/null; then
+    echo "✅ Ollama service is running"
+    echo "📁 Logs: ollama.log"
+    echo "🚀 API: http://localhost:11434"
 else
-    echo "❌ Failed to start ollama server"
+    echo "❌ Failed to start Ollama"
     exit 1
 fi
 
-# Pre-load models for faster first responses
-echo "📥 Pre-loading models for instant responses..."
+echo ""
+echo "Pre-loading models for faster responses..."
 
-## Pre-load llama3.2:1b
-#echo "  Loading llama3.2:1b..."
-#curl -s -X POST http://localhost:11434/api/generate \
-#  -H "Content-Type: application/json" \
-#  -d '{
-#    "model": "llama3.2:1b",
-#    "prompt": "",
-#    "keep_alive": -1,
-#    "options": {"num_ctx": 4096}
-#  }' > /dev/null
-
-# Pre-load llama3.2:3b
 echo "  Loading llama3.2:3b..."
 curl -s -X POST http://localhost:11434/api/generate \
   -H "Content-Type: application/json" \
@@ -68,42 +50,17 @@ curl -s -X POST http://localhost:11434/api/generate \
     "options": {"num_ctx": 4096}
   }' > /dev/null
 
-## Pre-load phi3:mini
-#echo "  Loading phi3:mini..."
-#curl -s -X POST http://localhost:11434/api/generate \
-#  -H "Content-Type: application/json" \
-#  -d '{
-#    "model": "phi3:mini",
-#    "prompt": "",
-#    "keep_alive": -1,
-#    "options": {"num_ctx": 4096}
-#  }' > /dev/null
-#
-## Pre-load gemma3:4b
-#echo "  Loading gemma3:4b..."
-#curl -s -X POST http://localhost:11434/api/generate \
-#  -H "Content-Type: application/json" \
-#  -d '{
-#    "model": "gemma3:4b",
-#    "prompt": "",
-#    "keep_alive": -1,
-#    "options": {"num_ctx": 4096}
-#  }' > /dev/null
+echo "✅ Ollama optimization complete!"
+echo ""
+echo "Performance benefits:"
+echo "- Models stay loaded indefinitely"
+echo "- 50% memory savings with KV cache optimization"
+echo "- Flash attention for faster processing"
+echo "- Support for 4 concurrent requests"
+echo "- Optimized CPU threading"
+echo ""
+echo "To stop: kill $OLLAMA_PID"
 
-echo "✅ All models pre-loaded and ready for instant responses!"
-echo ""
-echo "🎯 Performance Tips:"
-echo "  - Models will stay loaded indefinitely for fastest responses"
-echo "  - Consistent 4096 context size prevents model reloading"
-echo "  - 8-bit KV cache reduces memory usage by ~50%"
-echo "  - Flash Attention provides faster processing"
-echo ""
-echo "🔍 Monitor performance:"
-echo "  - Check loaded models: curl http://localhost:11434/api/tags"
-echo "  - Check memory usage: htop or nvidia-smi"
-echo "  - View logs: journalctl -u ollama -f"
-echo ""
-echo "🚀 Ollama is now optimized and ready for maximum performance!"
-
-# Keep the script running (so ollama doesn't exit)
-wait $OLLAMA_PID
+while true; do
+    sleep 30
+done

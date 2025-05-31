@@ -1,5 +1,6 @@
 .vscode
 .idea
+.cursor
 node_modules
 
 .env

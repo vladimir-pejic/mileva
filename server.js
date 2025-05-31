@@ -10,18 +10,14 @@ const OLLAMA_API_URL = 'http://localhost:11434';
 
 app.use(express.json());
 
-// Middleware to ensure JSON responses and pretty print for browsers
 app.use((req, res, next) => {
     const originalJson = res.json;
     res.json = function(obj) {
         res.setHeader('Content-Type', 'application/json');
         
-        // Check if request is from a browser (has text/html in Accept header)
-        // But allow forcing JSON with ?format=json query parameter
         const isBrowser = req.headers.accept && req.headers.accept.includes('text/html') && req.query.format !== 'json';
         
         if (isBrowser) {
-            // Pretty print JSON for browser viewing with basic styling
             const prettyJson = JSON.stringify(obj, null, 2);
             const html = `
 <!DOCTYPE html>
@@ -49,7 +45,6 @@ app.use((req, res, next) => {
             res.setHeader('Content-Type', 'text/html');
             return res.send(html);
         } else {
-            // Standard JSON response for API clients
             return originalJson.call(this, obj);
         }
     };
@@ -182,7 +177,7 @@ app.post('/api/llama32-1b', async (req, res) => {
     console.log(`Processing llama32-1b request with input: ${input.substring(0, 100)}...`);
     
     try {
-        const result = await callOllamaAPI('llama3.2:1b', input, 180000); // Increased to 3 minutes for complex prompts
+        const result = await callOllamaAPI('llama3.2:1b', input, 180000);
         console.log('Llama32-1b request completed successfully');
         res.json({ result: result });
     } catch (error) {
@@ -224,7 +219,7 @@ app.post('/api/gemma3-4b', async (req, res) => {
     console.log(`Processing gemma3-4b request with input: ${input.substring(0, 100)}...`);
 
     try {
-        const result = await callOllamaAPI('gemma3:4b', input, 150000); // 2.5 minutes for 4B model
+        const result = await callOllamaAPI('gemma3:4b', input, 150000);
         console.log('Gemma3-4b request completed successfully');
         res.json({ result: result });
     } catch (error) {
@@ -245,7 +240,7 @@ app.post('/api/phi3-mini', async (req, res) => {
     console.log(`Processing phi3-mini request with input: ${input.substring(0, 100)}...`);
 
     try {
-        const result = await callOllamaAPI('phi3:mini', input, 120000); // 2 minutes for mini model
+        const result = await callOllamaAPI('phi3:mini', input, 120000);
         console.log('Phi3-mini request completed successfully');
         res.json({ result: result });
     } catch (error) {
@@ -342,12 +337,12 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Mileva API server running on port ${PORT}`);
-    console.log(`🧪 Purpose: Testing and accessing ANY installed Ollama model`);
-    console.log(`🔑 API key to use: ${API_KEY}`);
-    console.log(`📚 Documentation: http://localhost:${PORT}/`);
-    console.log(`❤️  Health check: http://localhost:${PORT}/health`);
-    console.log(`🧪 Ollama test: http://localhost:${PORT}/api/test-ollama`);
-    console.log(`📊 Ollama status: http://localhost:${PORT}/api/ollama-status`);
-    console.log(`\n💡 To add new models: Just create new endpoints following the pattern!`);
+    console.log(`Mileva API server running on port ${PORT}`);
+    console.log(`Purpose: Testing and accessing ANY installed Ollama model`);
+    console.log(`API key to use: ${API_KEY}`);
+    console.log(`Documentation: http://localhost:${PORT}/`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+    console.log(`Ollama test: http://localhost:${PORT}/api/test-ollama`);
+    console.log(`Ollama status: http://localhost:${PORT}/api/ollama-status`);
+    console.log(`\nTo add new models: Just create new endpoints following the pattern!`);
 });
